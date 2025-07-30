@@ -77,7 +77,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const chart = new Chart(ctx, {
     type: 'bar',
-    {
     labels: data.map(s => s.state),
       datasets: [{
         label: 'Population',
@@ -92,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   });
-
+}
   function renderStateTable(data) {
     const table = document.getElementById('stateTable');
     const head = table.querySelector('thead');
