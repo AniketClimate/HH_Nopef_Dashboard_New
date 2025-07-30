@@ -34,7 +34,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const charts = {};
 
   // ---------------------- Helpers ----------------------
-  const $(id) => document.getElementById(id);
+  const $ = (id) => document.getElementById(id);
   const format = (n) => n.toLocaleString("en-IN");
   const avg = (arr) => arr.reduce((s, v) => s + v, 0) / arr.length || 0;
 
