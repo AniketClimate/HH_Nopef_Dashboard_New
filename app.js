@@ -57,39 +57,42 @@ document.addEventListener('DOMContentLoaded', () => {
    * Renders Cards and Population Chart
    */
   function renderOverview(data) {
-    // KPIs
-    const kpiGrid = document.getElementById('kpiGrid');
-    const totalPopulation = data.reduce((sum, s) => sum + (s.population || 0), 0);
-    const avgYouthPct = avg(data.map(s => s.youthPercentage));
-    const avgSmartphone = avg(data.map(s => s.smartphonePenetration));
-    const avgHealthSpend = avg(data.map(s => s.govtHealthSpendPerCapita));
+  // KPIs
+  const kpiGrid = document.getElementById('kpiGrid');
+  const totalPopulation = data.reduce((sum, s) => sum + (s.population || 0), 0);
+  const avgYouthPct = avg(data.map(s => s.youthPercentage));
+  const avgSmartphone = avg(data.map(s => s.smartphonePenetration));
+  const avgHealthSpend = avg(data.map(s => s.govtHealthSpendPerCapita));
 
-    kpiGrid.innerHTML = `
-      <div class="kpi-card"><h3>Total Population</h3><div class="number-large">${formatNum(totalPopulation)}</div></div>
-      <div class="kpi-card"><h3>Avg Youth %</h3><div class="number-large">${avgYouthPct.toFixed(1)}%</div></div>
-      <div class="kpi-card"><h3>Avg Smartphone %</h3><div class="number-large">${avgSmartphone.toFixed(1)}%</div></div>
-      <div class="kpi-card"><h3>Avg Health Spend</h3><div class="number-large">₹${formatNum(avgHealthSpend)}</div></div>
-    `;
+  kpiGrid.innerHTML = `
+    <div class="kpi-card"><h3>Total Population</h3><div class="number-large">${formatNum(totalPopulation)}</div></div>
+    <div class="kpi-card"><h3>Avg Youth %</h3><div class="number-large">${avgYouthPct.toFixed(1)}%</div></div>
+    <div class="kpi-card"><h3>Avg Smartphone %</h3><div class="number-large">${avgSmartphone.toFixed(1)}%</div></div>
+    <div class="kpi-card"><h3>Avg Health Spend</h3><div class="number-large">₹${formatNum(avgHealthSpend)}</div></div>
+  `;
 
-    // Bar Chart
-    const ctx = document.getElementById('populationChart');
-    if (!ctx) return;
-    const chart = new Chart(ctx, {
-      type: 'bar',
-       {
-        labels: data.map(s => s.state),
-        datasets: [{
-          label: 'Population',
-           data.map(s => s.population),
-          backgroundColor: '#1FB8CD'
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: { legend: { display: false }}
+  // Chart
+  const ctx = document.getElementById('populationChart');
+  if (!ctx) return;
+
+  const chart = new Chart(ctx, {
+    type: 'bar',
+     {
+      labels: data.map(s => s.state),
+      datasets: [{
+        label: 'Population',
+         data.map(s => s.population),
+        backgroundColor: '#1FB8CD'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false }
       }
-    });
-  }
+    }
+  });
+}
 
   function renderStateTable(data) {
     const table = document.getElementById('stateTable');
