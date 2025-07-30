@@ -74,10 +74,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Chart
   const ctx = document.getElementById('populationChart');
   if (!ctx) return;
+  // If re-rendering, optionally destroy previous chart
 
   const chart = new Chart(ctx, {
     type: 'bar',
-    labels: data.map(s => s.state),
+     {
+      labels: data.map(s => s.state),
       datasets: [{
         label: 'Population',
          data.map(s => s.population),
