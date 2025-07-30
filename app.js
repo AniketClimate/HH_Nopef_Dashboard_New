@@ -194,7 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Load JSON data (tries root first, then /public/)
   // ---------------------------------------------------------------------------
   function loadData() {
-    const tryPaths = ['data.json', 'public/data.json'];
+    const tryPaths = ['data.json', 'data.json'];
     let attempt = 0;
 
     function attemptFetch() {
