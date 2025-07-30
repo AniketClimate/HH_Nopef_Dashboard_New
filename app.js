@@ -1,437 +1,337 @@
-// Halla Health Dashboard - Corrected Version
-// Fixed: null element click error and improved data loading
+/* app.js - Updated to match new data.json structure */
 
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('âœ… Halla Health dashboard script loaded');
+document.addEventListener("DOMContentLoaded", () => {
+  // ---------------------- Config ----------------------
+  const DATA_PATHS = [
+    "data.json", // root-level (preferred)
+    "public/data.json", // fallback if kept inside /public
+  ];
 
-  // Global variables
+  // Map dashboard fields -> JSON fields
+  const FIELD_MAP = {
+    name: "name",
+    population: "population_current",
+    populationProjected: "population_projected",
+    youthPct: "youth_percentage",
+    internetPenetration: "internet_penetration",
+    smartphonePenetration: "smartphone_penetration",
+    digitalLiteracy: "digital_literacy",
+    perCapitaIncome: "per_capita_income",
+    healthSpend: "government_health_spending",
+    healthInfraScore: "health_infrastructure_score",
+    abdmRate: "abdm_adoption_rate",
+    healthAppUsage: "health_app_usage",
+    ruralUrban: "rural_urban_ratio",
+    literacyRate: "literacy_rate",
+    climateRisk: "climate_vulnerability_score",
+    attractiveness: "market_attractiveness_score",
+    priority: "priority_category",
+  };
+
+  // ---------------------- State ----------------------
   let stateData = [];
-  let compareChartInstance = null;
+  let currentView = "dashboard";
+  const charts = {};
 
-  // Utility functions
-  const avg = arr => arr.length ? arr.reduce((s, v) => s + (+v || 0), 0) / arr.length : 0;
-  const normalize = (val, max) => max ? Math.min(100, (val / max) * 100) : 0;
-  const formatNum = n => {
-    if (n >= 1e7) return (n / 1e7).toFixed(1) + 'Cr';
-    if (n >= 1e5) return (n / 1e5).toFixed(1) + 'L';
-    return (+n || 0).toLocaleString();
-  };
+  // ---------------------- Helpers ----------------------
+  const $(id) => document.getElementById(id);
+  const format = (n) => n.toLocaleString("en-IN");
+  const avg = (arr) => arr.reduce((s, v) => s + v, 0) / arr.length || 0;
 
-  // Toast notification helper
-  const showToast = (msg, type = 'info') => {
-    let container = document.getElementById('toastContainer');
-    if (!container) {
-      container = document.createElement('div');
-      container.id = 'toastContainer';
-      container.className = 'toast-container';
-      container.style.cssText = `
-        position: fixed; top: 20px; right: 20px; z-index: 9999;
-        display: flex; flex-direction: column; gap: 10px;
-      `;
-      document.body.appendChild(container);
+  // ---------------------- Initialization ----------------------
+  init();
+
+  function init() {
+    console.log("âœ… Halla Health dashboard script loaded");
+    bindNavigation();
+    bindTabs();
+    loadData();
+  }
+
+  // ---------------------- Data Loading ----------------------
+  async function loadData() {
+    for (const path of DATA_PATHS) {
+      try {
+        const res = await fetch(path);
+        if (!res.ok) throw new Error(res.status);
+        const raw = await res.json();
+        if (!Array.isArray(raw)) throw new Error("JSON must be an array");
+        console.log("ðŸ“Š Loaded", raw.length, "records from", path);
+        stateData = raw.map(mapRecord);
+        renderDashboard();
+        renderCMS();
+        return; // success
+      } catch (err) {
+        console.warn("âš ï¸ Failed to load", path, err);
+      }
     }
+    console.error("âŒ All data.json fetch attempts failed");
+  }
 
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.style.cssText = `
-      padding: 12px 16px; border-radius: 4px; color: white; font-size: 14px;
-      background: ${type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#007bff'};
-    `;
-    toast.textContent = msg;
-    container.appendChild(toast);
+  function mapRecord(obj) {
+    const mapped = {};
+    for (const key in FIELD_MAP) {
+      mapped[key] = obj[FIELD_MAP[key]] ?? 0;
+    }
+    return mapped;
+  }
 
-    setTimeout(() => {
-      if (toast.parentNode) {
-        toast.parentNode.removeChild(toast);
-      }
-    }, 4000);
-  };
+  // ---------------------- Navigation ----------------------
+  function bindNavigation() {
+    $("navDashboard").addEventListener("click", () => switchView("dashboard"));
+    $("navCms").addEventListener("click", () => switchView("cms"));
+  }
 
-  // Tab switching functionality
-  const tabButtons = document.querySelectorAll('.tab-btn');
-  const tabContents = document.querySelectorAll('.tab-content');
+  function switchView(view) {
+    currentView = view;
+    for (const v of document.querySelectorAll(".view")) v.classList.add("hidden");
+    $(view + "View").classList.remove("hidden");
+  }
 
-  function switchToTab(targetTabId) {
-    // Update button states
-    tabButtons.forEach(btn => {
-      const isActive = btn.dataset.tab === targetTabId;
-      btn.classList.toggle('active', isActive);
-      btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
-    });
-
-    // Update content visibility
-    tabContents.forEach(content => {
-      content.classList.toggle('active', content.id === targetTabId);
-    });
-
-    // Render content based on tab
-    if (stateData.length > 0) {
-      switch(targetTabId) {
-        case 'overviewTab':
-          renderOverview(stateData);
-          break;
-        case 'stateTab':
-          renderStateTable(stateData);
-          break;
-        case 'compareTab':
-          setupCompare(stateData);
-          break;
-      }
+  // ---------------------- Tabs ----------------------
+  function bindTabs() {
+    for (const btn of document.querySelectorAll(".tab-btn")) {
+      btn.addEventListener("click", () => {
+        for (const b of document.querySelectorAll(".tab-btn")) b.classList.remove("active");
+        for (const c of document.querySelectorAll(".tab-content")) c.classList.remove("active");
+        btn.classList.add("active");
+        $(btn.dataset.tab).classList.add("active");
+      });
     }
   }
 
-  // Bind tab click events
-  tabButtons.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const tabId = btn.dataset.tab;
-      if (tabId) {
-        switchToTab(tabId);
-      }
-    });
-  });
-
-  // Navigation between Dashboard and CMS
-  const navDashboard = document.getElementById('navDashboard');
-  const navCms = document.getElementById('navCms');
-  const dashboardView = document.getElementById('dashboardView');
-  const cmsView = document.getElementById('cmsView');
-
-  if (navDashboard) {
-    navDashboard.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (dashboardView) dashboardView.classList.remove('hidden');
-      if (cmsView) cmsView.classList.add('hidden');
-      navDashboard.classList.add('active');
-      if (navCms) navCms.classList.remove('active');
-    });
-  }
-
-  if (navCms) {
-    navCms.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (dashboardView) dashboardView.classList.add('hidden');
-      if (cmsView) cmsView.classList.remove('hidden');
-      navCms.classList.add('active');
-      if (navDashboard) navDashboard.classList.remove('active');
-    });
-  }
-
-  // Render functions
-  function renderOverview(data) {
-    if (!data || !data.length) return;
-
-    const kpiGrid = document.getElementById('kpiGrid');
+  // ---------------------- Dashboard Rendering ----------------------
+  function renderDashboard() {
+    // KPIs
+    const kpiGrid = $("kpiGrid");
     if (!kpiGrid) return;
-
-    const totalPop = data.reduce((s, d) => s + (+d.population || 0), 0);
-    const avgYouth = avg(data.map(d => +d.youthPercentage || 0)).toFixed(1);
-    const avgSmartphone = avg(data.map(d => +d.smartphonePenetration || 0)).toFixed(1);
-    const avgHealthSpend = avg(data.map(d => +d.govtHealthSpendPerCapita || 0));
+    const totalPop = stateData.reduce((s, r) => s + r.population, 0);
+    const totalProj = stateData.reduce((s, r) => s + r.populationProjected, 0);
+    const avgYouth = avg(stateData.map((r) => r.youthPct));
+    const avgSmart = avg(stateData.map((r) => r.smartphonePenetration));
 
     kpiGrid.innerHTML = `
-      <div class="kpi-card">
-        <h3>Total Population</h3>
-        <div class="number-large">${formatNum(totalPop)}</div>
-      </div>
-      <div class="kpi-card">
-        <h3>Avg Youth %</h3>
-        <div class="number-large">${avgYouth}%</div>
-      </div>
-      <div class="kpi-card">
-        <h3>Avg Smartphone %</h3>
-        <div class="number-large">${avgSmartphone}%</div>
-      </div>
-      <div class="kpi-card">
-        <h3>Avg Health Spend</h3>
-        <div class="number-large">â‚¹${formatNum(avgHealthSpend)}</div>
-      </div>
+      <div class="kpi-card"><h3>Total Pop (Now)</h3><div class="kpi-val">${format(totalPop)}</div></div>
+      <div class="kpi-card"><h3>Total Pop (2030)</h3><div class="kpi-val">${format(totalProj)}</div></div>
+      <div class="kpi-card"><h3>Avg Youth %</h3><div class="kpi-val">${avgYouth.toFixed(1)}%</div></div>
+      <div class="kpi-card"><h3>Avg Smartphone %</h3><div class="kpi-val">${avgSmart.toFixed(1)}%</div></div>
     `;
 
-    // Render population chart
-    const chartCanvas = document.getElementById('populationChart');
-    if (!chartCanvas) return;
-
-    // Destroy existing chart if it exists
-    if (chartCanvas.chart) {
-      chartCanvas.chart.destroy();
-    }
-
-    try {
-      chartCanvas.chart = new Chart(chartCanvas.getContext('2d'), {
-        type: 'bar',
-        data: {
-          labels: data.map(d => d.state),
-          datasets: [{
-            label: 'Population',
-            data: data.map(d => +d.population || 0),
-            backgroundColor: '#1FB8CD',
-            borderColor: '#1FB8CD',
-            borderWidth: 1
-          }]
+    // Charts
+    buildBarChart("populationChart", {
+      labels: stateData.map((r) => r.name),
+      datasets: [
+        {
+          label: "Population (Current)",
+          data: stateData.map((r) => r.population),
+          backgroundColor: "#1FB8CD",
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                callback: function(value) {
-                  return formatNum(value);
-                }
-              }
-            }
-          }
-        }
-      });
-    } catch (error) {
-      console.error('Error creating population chart:', error);
-    }
+        {
+          label: "Population (Projected)",
+          data: stateData.map((r) => r.populationProjected),
+          backgroundColor: "#FFC185",
+        },
+      ],
+    });
+
+    buildBarChart("attractivenessChart", {
+      labels: stateData.map((r) => r.name),
+      datasets: [
+        {
+          label: "Market Attractiveness",
+          data: stateData.map((r) => r.attractiveness),
+          backgroundColor: "#5D878F",
+        },
+      ],
+    });
+
+    buildLineChart("digitalChart", {
+      labels: stateData.map((r) => r.name),
+      datasets: [
+        {
+          label: "Internet %",
+          data: stateData.map((r) => r.internetPenetration),
+          borderColor: "#944454",
+        },
+        {
+          label: "Smartphone %",
+          data: stateData.map((r) => r.smartphonePenetration),
+          borderColor: "#D2BA4C",
+        },
+      ],
+    });
+
+    buildLineChart("healthChart", {
+      labels: stateData.map((r) => r.name),
+      datasets: [
+        {
+          label: "Health Infra Score",
+          data: stateData.map((r) => r.healthInfraScore),
+          borderColor: "#13343B",
+        },
+        {
+          label: "ABDM Adoption %",
+          data: stateData.map((r) => r.abdmRate),
+          borderColor: "#DB4545",
+        },
+      ],
+    });
+
+    // State Table
+    renderStateTable();
+
+    // Compare dropdowns
+    populateCompare();
   }
 
-  function renderStateTable(data) {
-    if (!data || !data.length) return;
+  function buildBarChart(canvasId, cfg) {
+    const ctx = $(canvasId);
+    if (!ctx) return;
+    charts[canvasId]?.destroy?.();
+    charts[canvasId] = new Chart(ctx, { type: "bar", data: cfg, options: { responsive: true, plugins: { legend: { display: true }}}});
+  }
 
-    const table = document.getElementById('stateTable');
+  function buildLineChart(canvasId, cfg) {
+    const ctx = $(canvasId);
+    if (!ctx) return;
+    charts[canvasId]?.destroy?.();
+    charts[canvasId] = new Chart(ctx, { type: "line", data: cfg, options: { responsive: true, plugins: { legend: { display: true }}}});
+  }
+
+  // ---------------------- State Table ----------------------
+  function renderStateTable() {
+    const table = $("stateTable");
     if (!table) return;
+    const head = table.querySelector("thead");
+    const body = table.querySelector("tbody");
 
-    const thead = table.querySelector('thead');
-    const tbody = table.querySelector('tbody');
-    if (!thead || !tbody) return;
-
-    thead.innerHTML = `
+    head.innerHTML = `
       <tr>
         <th>State</th>
-        <th>Population</th>
+        <th>Pop (Now)</th>
+        <th>Pop (Proj)</th>
         <th>Youth %</th>
         <th>Smartphone %</th>
-        <th>Health Spend</th>
-        <th>Climate Risk</th>
-      </tr>
-    `;
+        <th>Infra Score</th>
+        <th>ABDM %</th>
+        <th>Attractiveness</th>
+        <th>Priority</th>
+      </tr>`;
 
-    tbody.innerHTML = data.map(d => `
-      <tr>
-        <td><strong>${d.state || 'Unknown'}</strong></td>
-        <td>${formatNum(d.population || 0)}</td>
-        <td>${d.youthPercentage || 0}%</td>
-        <td>${d.smartphonePenetration || 0}%</td>
-        <td>â‚¹${formatNum(d.govtHealthSpendPerCapita || 0)}</td>
-        <td>${d.climateVulnerability || 0}/10</td>
-      </tr>
-    `).join('');
+    body.innerHTML = stateData
+      .map((r) => `
+        <tr>
+          <td>${r.name}</td>
+          <td>${format(r.population)}</td>
+          <td>${format(r.populationProjected)}</td>
+          <td>${r.youthPct}%</td>
+          <td>${r.smartphonePenetration}%</td>
+          <td>${r.healthInfraScore}</td>
+          <td>${r.abdmRate}%</td>
+          <td>${r.attractiveness}</td>
+          <td class="priority-${r.priority?.split(" ")[0].toLowerCase()}">${r.priority || "â€”"}</td>
+        </tr>
+      `)
+      .join("");
   }
 
-  function setupCompare(data) {
-    if (!data || !data.length) return;
+  // ---------------------- Compare ----------------------
+  function populateCompare() {
+    const a = $("compareA");
+    const b = $("compareB");
+    if (!a || !b) return;
 
-    const selectA = document.getElementById('compareA');
-    const selectB = document.getElementById('compareB');
-    const chartCanvas = document.getElementById('compareChart');
+    const opts = stateData.map((r) => `<option value="${r.name}">${r.name}</option>`).join("");
+    a.innerHTML = "<option value=''>Choose...</option>" + opts;
+    b.innerHTML = "<option value=''>Choose...</option>" + opts;
 
-    if (!selectA || !selectB || !chartCanvas) return;
+    a.selectedIndex = 1;
+    b.selectedIndex = 2;
 
-    // Populate dropdowns only if empty
-    if (selectA.options.length === 0) {
-      selectA.innerHTML = data.map(d => 
-        `<option value="${d.state}">${d.state}</option>`
-      ).join('');
-      selectB.innerHTML = selectA.innerHTML;
+    a.addEventListener("change", drawCompare);
+    b.addEventListener("change", drawCompare);
+    drawCompare();
 
-      // Set default selections
-      if (data.length >= 2) {
-        selectA.selectedIndex = 0;
-        selectB.selectedIndex = 1;
-      }
-    }
+    function drawCompare() {
+      const sA = stateData.find((r) => r.name === a.value);
+      const sB = stateData.find((r) => r.name === b.value);
+      if (!sA || !sB) return;
+      const ctx = $("compareChart");
+      if (!ctx) return;
 
-    function drawCompareChart() {
-      const stateA = data.find(d => d.state === selectA.value);
-      const stateB = data.find(d => d.state === selectB.value);
-
-      if (!stateA || !stateB) return;
-
-      const datasetA = [
-        normalize(stateA.population, 250e6),
-        stateA.youthPercentage || 0,
-        stateA.smartphonePenetration || 0,
-        normalize(stateA.govtHealthSpendPerCapita, 50000),
-        ((10 - (stateA.climateVulnerability || 0)) * 10)
-      ];
-
-      const datasetB = [
-        normalize(stateB.population, 250e6),
-        stateB.youthPercentage || 0,
-        stateB.smartphonePenetration || 0,
-        normalize(stateB.govtHealthSpendPerCapita, 50000),
-        ((10 - (stateB.climateVulnerability || 0)) * 10)
-      ];
-
-      // Destroy existing chart
-      if (compareChartInstance) {
-        compareChartInstance.destroy();
-      }
-
-      try {
-        compareChartInstance = new Chart(chartCanvas.getContext('2d'), {
-          type: 'radar',
-          data: {
-            labels: ['Population', 'Youth %', 'Smartphone %', 'Health Spend', 'Climate Resilience'],
-            datasets: [
-              {
-                label: stateA.state,
-                data: datasetA,
-                backgroundColor: '#1FB8CD33',
-                borderColor: '#1FB8CD',
-                borderWidth: 2
-              },
-              {
-                label: stateB.state,
-                data: datasetB,
-                backgroundColor: '#FFC18533',
-                borderColor: '#FFC185',
-                borderWidth: 2
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-              r: {
-                suggestedMin: 0,
-                suggestedMax: 100,
-                ticks: {
-                  stepSize: 25
-                }
-              }
-            }
-          }
-        });
-      } catch (error) {
-        console.error('Error creating compare chart:', error);
-      }
-    }
-
-    // Bind change events
-    selectA.addEventListener('change', drawCompareChart);
-    selectB.addEventListener('change', drawCompareChart);
-
-    // Initial draw
-    drawCompareChart();
-  }
-
-  // Data loading function with multiple path attempts
-  function loadData() {
-    const possiblePaths = ['data.json', 'public/data.json', './data.json', './public/data.json'];
-    let currentPath = 0;
-
-    function tryNextPath() {
-      if (currentPath >= possiblePaths.length) {
-        console.error('âŒ All data.json fetch attempts failed');
-        showToast('Could not load state data from any location', 'error');
-
-        // Use fallback data for demo
-        const fallbackData = [
+      const fPop = (n) => Math.min(100, (n / 250_000_000) * 100);
+      const f100 = (n) => Math.min(100, n);
+      const data = {
+        labels: ["Population", "Youth %", "Smart %", "Infra", "Attractiveness"],
+        datasets: [
           {
-            state: "Delhi",
-            population: 32000000,
-            youthPercentage: 28.5,
-            smartphonePenetration: 78.2,
-            govtHealthSpendPerCapita: 46200,
-            climateVulnerability: 7.8
+            label: sA.name,
+            data: [
+              fPop(sA.population),
+              f100(sA.youthPct),
+              f100(sA.smartphonePenetration),
+              f100(sA.healthInfraScore * 10),
+              f100(sA.attractiveness * 10),
+            ],
+            backgroundColor: "#1FB8CD66",
+            borderColor: "#1FB8CD",
           },
           {
-            state: "Maharashtra", 
-            population: 125000000,
-            youthPercentage: 31.2,
-            smartphonePenetration: 69.4,
-            govtHealthSpendPerCapita: 23800,
-            climateVulnerability: 6.2
-          }
-        ];
+            label: sB.name,
+            data: [
+              fPop(sB.population),
+              f100(sB.youthPct),
+              f100(sB.smartphonePenetration),
+              f100(sB.healthInfraScore * 10),
+              f100(sB.attractiveness * 10),
+            ],
+            backgroundColor: "#FFC18566",
+            borderColor: "#FFC185",
+          },
+        ],
+      };
 
-        console.log('ðŸ“Š Using fallback data with', fallbackData.length, 'records');
-        stateData = fallbackData;
-        initializeInterface();
-        return;
-      }
-
-      const path = possiblePaths[currentPath];
-      console.log(`ðŸ” Attempting to load from: ${path}`);
-
-      fetch(path)
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-          }
-          return response.json();
-        })
-        .then(data => {
-          console.log('ðŸ“Š Loaded', data.length, 'records from', path);
-          stateData = data;
-          initializeInterface();
-        })
-        .catch(error => {
-          console.warn(`Failed to load from ${path}:`, error.message);
-          currentPath++;
-          tryNextPath();
-        });
+      charts.compare?.destroy?.();
+      charts.compare = new Chart(ctx, { type: "radar", data, options: { responsive: true, scales: { r: { suggestedMax: 100 }}} });
     }
-
-    tryNextPath();
   }
 
-  // Initialize interface after data is loaded
-  function initializeInterface() {
-    // Ensure we have data
-    if (!stateData || stateData.length === 0) {
-      console.warn('No state data available');
-      return;
-    }
-
-    // Activate the overview tab by default (safely)
-    const overviewTabBtn = document.querySelector('.tab-btn[data-tab="overviewTab"]');
-    if (overviewTabBtn) {
-      switchToTab('overviewTab');
-    } else {
-      // Fallback: just render overview content
-      renderOverview(stateData);
-      renderStateTable(stateData);
-      setupCompare(stateData);
-    }
-
-    showToast(`Dashboard loaded with ${stateData.length} states`, 'success');
+  // ---------------------- CMS Rendering ----------------------
+  function renderCMS() {
+    renderAdminTable();
+    bindCMSLogin();
   }
 
-  // CMS Login functionality (basic implementation)
-  const loginForm = document.getElementById('loginForm');
-  if (loginForm) {
-    loginForm.addEventListener('submit', (e) => {
+  function bindCMSLogin() {
+    const form = $("loginForm");
+    if (!form) return;
+    form.addEventListener("submit", (e) => {
       e.preventDefault();
-
-      const username = document.getElementById('username')?.value;
-      const password = document.getElementById('password')?.value;
-
-      // Simple credential check (in production, use proper authentication)
-      if (username === 'admin' && password === 'admin123') {
-        const loginSection = document.getElementById('loginSection');
-        const adminSection = document.getElementById('adminSection');
-
-        if (loginSection) loginSection.classList.add('hidden');
-        if (adminSection) adminSection.classList.remove('hidden');
-
-        showToast('Login successful!', 'success');
-      } else {
-        showToast('Invalid credentials. Try admin/admin123', 'error');
-      }
+      const user = $("username").value.trim();
+      const pass = $("password").value.trim();
+      if (user === "admin" && pass === "admin123") {
+        $("loginSection").classList.add("hidden");
+        $("adminSection").classList.remove("hidden");
+        renderAdminTable();
+      } else alert("Invalid credentials");
     });
   }
 
-  // Start the application
-  loadData();
+  function renderAdminTable() {
+    const table = $("cmsStateTable");
+    if (!table) return;
+    const head = table.querySelector("thead");
+    const body = table.querySelector("tbody");
+    head.innerHTML = `<tr><th>State</th><th>Pop (Now)</th><th>Youth %</th><th>Smart %</th><th>Priority</th></tr>`;
+    body.innerHTML = stateData
+      .map((r, idx) => `
+        <tr>
+          <td>${r.name}</td>
+          <td><input type="number" data-idx="${idx}" data-field="population" value="${r.population}" /></td>
+          <td><input type="number" data-idx="${idx}" data-field="youthPct" value="${r.youthPct}" /></td>
+          <td><input type="number" data-idx="${idx}" data-field="smartphonePenetration" value="${r.smartphonePenetration}" /></td>
+          <td><input type="text" data-idx="${idx}" data-field="priority" value="${r.priority}" /></td>
+        </tr>`)
+      .join("");
+  }
 });
