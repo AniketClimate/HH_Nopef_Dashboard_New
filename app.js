@@ -39,26 +39,30 @@ document.addEventListener('DOMContentLoaded', () => {
   /**
    * Load Data from public/data.json or fallback
    */
-  fetch('./public/data.json')
-    .then(res => res.ok ? res.json() : Promise.reject(res.status))
-    .then(data => {
-      console.log("ðŸ“Š Data loaded:", data.length, "records");
-      stateData = data;
+  fetch('data.json')
+  .then(res => {
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  })
+  .then(data => {
+    stateData = data;
+    // Only render if kpiGrid exists
+    if (document.getElementById('kpiGrid')) {
       renderOverview(stateData);
-      renderStateTable(stateData);
-      setupCompare(stateData);
-    })
-    .catch(err => {
-      console.error("âŒ Failed loading data.json", err);
-      showToast("Error loading state data", "error");
-    });
-
+    }
+    renderStateTable(stateData);
+    setupCompare(stateData);
+  })
+  .catch(err => {
+    console.error('Failed loading data.json', err);
+    showToast('Error: could not load data', 'error');
+  });
   /**
    * Renders Cards and Population Chart
    */
   function renderOverview(data) {
-    // KPIs
-    const kpiGrid = document.getElementById('kpiGrid');
+  const kpiGrid = document.getElementById('kpiGrid');
+  if (!kpiGrid) return;          // safety net
     const totalPopulation = data.reduce((sum, s) => sum + (s.population || 0), 0);
     const avgYouthPct = avg(data.map(s => s.youthPercentage));
     const avgSmartphone = avg(data.map(s => s.smartphonePenetration));
