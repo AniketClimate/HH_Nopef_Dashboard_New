@@ -1,378 +1,130 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Halla Health | Market Entry Dashboard</title>
-  <link rel="stylesheet" href="style.css" />
-  <!-- Chart.js core -->
+  <meta charset="UTF-8">
+  <title>Halla Health – Market Dashboard & CMS</title>
+
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="header">
-    <div class="kpi-grid" id="kpiGrid"></div>
-<div class="container flex justify-between items-center py-16">
-      <h1 class="logo">Halla Health</h1>
-      <nav>
-        <ul class="nav flex gap-16" role="tablist">
-          <li><button class="nav__link active" data-target="overview" role="tab">Overview</button></li>
-          <li><button class="nav__link" data-target="state-analysis" role="tab">State Analysis</button></li>
-          <li><button class="nav__link" data-target="comparison-tool" role="tab">Comparison Tool</button></li>
-          <li><button class="nav__link" data-target="insights" role="tab">Strategic Insights</button></li>
-        </ul>
-      </nav>
+<header class="app-header">
+  <div class="container flex items-center justify-between py-16">
+    <h1 class="logo">Halla Health</h1>
+    <nav>
+      <ul class="nav flex gap-16">
+        <li><button id="navDashboard" class="btn btn--outline active" aria-controls="dashboardView">Dashboard</button></li>
+        <li><button id="navCms"       class="btn btn--outline"        aria-controls="cmsView">CMS</button></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main class="container py-16" id="mainContainer">
+
+  <!-- ============ DASHBOARD ============ -->
+  <section id="dashboardView" class="view">
+    <!-- Top-level tab strip -->
+    <div class="dashboard-tabs flex gap-8 mb-16" role="tablist">
+      <button class="tab-btn active" data-tab="overviewTab" role="tab" aria-selected="true">Overview</button>
+      <button class="tab-btn"        data-tab="stateTab"    role="tab" aria-selected="false">State Analysis</button>
+      <button class="tab-btn"        data-tab="compareTab"  role="tab" aria-selected="false">Compare</button>
     </div>
-  </header>
 
-  <main class="container py-16">
-    <!-- Overview Tab -->
-    <section id="overview" class="tab active" role="tabpanel">
-      <!-- Summary Cards -->
-      <div class="grid-cards">
-        <div class="card summary-card">
-          <div class="card__body">
-            <h3>Total Population (2025)</h3>
-            <p class="metric" id="totalPopulationMetric">--</p>
-          </div>
+    <!-- -------- OVERVIEW TAB -------- -->
+    <div id="overviewTab" class="tab-content active" role="tabpanel">
+      <div id="kpiGrid" class="kpi-grid" aria-live="polite"></div>
+
+      <div class="chart-card mt-16">
+        <h3>Population by State</h3>
+        <div class="chart-container" style="position:relative;height:320px">
+          <canvas id="populationChart"></canvas>
         </div>
-        <div class="card summary-card">
-          <div class="card__body">
-            <h3>Avg. Internet Penetration</h3>
-            <p class="metric" id="avgInternetMetric">--</p>
-          </div>
+      </div>
+    </div>
+
+    <!-- -------- STATE ANALYSIS TAB -------- -->
+    <div id="stateTab" class="tab-content" role="tabpanel">
+      <table id="stateTable" class="data-table" aria-describedby="stateTableCaption">
+        <caption id="stateTableCaption" class="sr-only">Key metrics for each state</caption>
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <!-- -------- COMPARE TAB -------- -->
+    <div id="compareTab" class="tab-content" role="tabpanel">
+      <div class="compare-controls flex gap-16 items-center mb-16">
+        <div class="compare-select-group">
+          <label for="compareA" class="form-label">State&nbsp;A</label>
+          <select id="compareA" class="form-control compare-select"></select>
         </div>
-        <div class="card summary-card">
-          <div class="card__body">
-            <h3>Avg. Smartphone Penetration</h3>
-            <p class="metric" id="avgSmartphoneMetric">--</p>
-          </div>
-        </div>
-        <div class="card summary-card">
-          <div class="card__body">
-            <h3>Top Market Score</h3>
-            <p class="metric" id="topScoreMetric">--</p>
-          </div>
+        <div class="compare-select-group">
+          <label for="compareB" class="form-label">State&nbsp;B</label>
+          <select id="compareB" class="form-control compare-select"></select>
         </div>
       </div>
 
-      <!-- Charts Section -->
-      <div class="charts-grid mt-8">
-        <div class="card chart-card">
-          <div class="card__body">
-            <h3 class="mb-8">Priority Distribution</h3>
-            <div class="chart-container" style="position: relative; height:300px;">
-              <canvas id="priorityPie"></canvas>
-            </div>
-          </div>
-        </div>
-        
-        <div class="card chart-card">
-          <div class="card__body">
-            <h3 class="mb-8">Market Attractiveness by State</h3>
-            <div class="chart-container" style="position: relative; height:300px;">
-              <canvas id="marketChart"></canvas>
-            </div>
-          </div>
+      <div class="chart-card">
+        <h3>Comparison Radar</h3>
+        <div class="chart-container" style="position:relative;height:320px">
+          <canvas id="compareChart"></canvas>
         </div>
       </div>
+    </div>
+  </section>
 
-      <!-- Top States Table -->
-      <div class="card mt-8">
-        <div class="card__body">
-          <h3 class="mb-8">Top 10 States by Market Score</h3>
-          <div class="table-wrapper">
-            <table id="topStatesTable" class="data-table">
-              <thead>
-                <tr>
-                  <th>Rank</th>
-                  <th>State</th>
-                  <th>Market Score</th>
-                  <th>Population (M)</th>
-                  <th>Internet %</th>
-                  <th>Smartphone %</th>
-                  <th>Priority</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
+  <!-- ============ CMS ============ -->
+  <section id="cmsView" class="view hidden">
+
+    <!-- ----- LOGIN SCREEN ----- -->
+    <div id="loginSection">
+      <div class="login-card">
+        <h2>Admin Login</h2>
+        <form id="loginForm">
+          <div class="form-group">
+            <label class="form-label" for="username">Username</label>
+            <input class="form-control" id="username" type="text" required>
           </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- State Analysis Tab -->
-    <section id="state-analysis" class="tab" role="tabpanel">
-      <div class="form-group">
-        <label for="stateSelect" class="form-label">Select a State</label>
-        <select id="stateSelect" class="form-control"></select>
-      </div>
-      
-      <div class="card mb-8" id="stateProfileCard">
-        <div class="card__body" id="stateProfileBody">
-          <p class="text-secondary">Please select a state to view detailed analysis.</p>
-        </div>
-      </div>
-      
-      <div class="card">
-        <div class="card__body">
-          <h3 class="mb-8">State Performance Radar</h3>
-          <div class="chart-container" style="position: relative; height:400px;">
-            <canvas id="stateRadar"></canvas>
+          <div class="form-group">
+            <label class="form-label" for="password">Password</label>
+            <input class="form-control" id="password" type="password" required>
           </div>
-        </div>
+          <button id="loginBtn" class="btn btn--primary btn--full-width" type="submit">Login</button>
+          <p class="login-hint">Hint: admin&nbsp;/&nbsp;admin123</p>
+        </form>
       </div>
-    </section>
+    </div>
 
-    <!-- Comparison Tool Tab -->
-    <section id="comparison-tool" class="tab" role="tabpanel">
-      <div class="form-group">
-        <label for="comparisonSelect" class="form-label">Select up to 4 States to Compare (hold Ctrl/Cmd to select multiple)</label>
-        <select id="comparisonSelect" class="form-control" multiple size="8"></select>
+    <!-- ----- ADMIN SCREEN ----- -->
+    <div id="adminSection" class="hidden">
+      <h2>State Data Editor</h2>
+
+      <div class="admin-controls mb-16">
+        <button id="exportBtn" class="btn btn--primary">Export JSON</button>
+        <button id="importBtn" class="btn btn--outline">Import JSON</button>
+        <input id="fileInput" type="file" accept="application/json" class="hidden">
       </div>
-      
-      <div class="card mb-8" id="comparisonTableCard">
-        <div class="card__body">
-          <div class="flex justify-between items-center mb-8">
-            <h3>Comparison Table</h3>
-            <button id="exportBtn" class="btn btn--outline btn--sm">Export CSV</button>
-          </div>
-          <div class="table-wrapper">
-            <table id="comparisonTable" class="data-table">
-              <thead>
-                <tr>
-                  <th>Metric</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
+
+      <div class="table-wrapper">
+        <table id="cmsStateTable" class="data-table" aria-describedby="cmsCaption">
+          <caption id="cmsCaption" class="sr-only">Editable state metrics</caption>
+          <thead></thead>
+          <tbody></tbody>
+        </table>
       </div>
-      
-      <div class="card">
-        <div class="card__body">
-          <h3 class="mb-8">Market Score Comparison</h3>
-          <div class="chart-container" style="position: relative; height:400px;">
-            <canvas id="comparisonBar"></canvas>
-          </div>
-        </div>
-      </div>
-    </section>
+    </div>
+  </section>
+</main>
 
-    <!-- Strategic Insights Tab -->
-    <section id="insights" class="tab" role="tabpanel">
-      <div class="insights-grid">
-        <div class="card">
-          <div class="card__body">
-            <h2>Market Entry Strategy</h2>
-            
-            <div class="strategy-phase">
-              <div class="phase-header">
-                <h3>Phase 1: High Priority Markets</h3>
-                <span class="status status--success">0-12 Months</span>
-              </div>
-              <div class="phase-content">
-                <h4>Target States:</h4>
-                <ul>
-                  <li><strong>Delhi</strong> - Highest market score (7.25), excellent digital infrastructure</li>
-                  <li><strong>Chandigarh</strong> - Strong urban penetration and health infrastructure</li>
-                </ul>
-                <h4>Key Actions:</h4>
-                <ul>
-                  <li>Focus immediate marketing and partnership efforts leveraging high digital readiness</li>
-                  <li>Collaborate with state governments on ABDM integration</li>
-                  <li>Establish urban clinic partnerships and telemedicine hubs</li>
-                </ul>
-              </div>
-            </div>
+<footer class="text-center py-16">
+  <small>© 2025 Halla Health</small>
+</footer>
 
-            <div class="strategy-phase">
-              <div class="phase-header">
-                <h3>Phase 2: Medium Priority Markets</h3>
-                <span class="status status--warning">12-24 Months</span>
-              </div>
-              <div class="phase-content">
-                <h4>Target States:</h4>
-                <ul>
-                  <li><strong>Tamil Nadu</strong> - Strong health infrastructure and digital adoption</li>
-                  <li><strong>Sikkim</strong> - High per capita income and digital literacy</li>
-                </ul>
-                <h4>Key Actions:</h4>
-                <ul>
-                  <li>Enter progressive southern markets with phased rollouts</li>
-                  <li>Develop local language interfaces and culturally appropriate content</li>
-                  <li>Build community health worker networks</li>
-                </ul>
-              </div>
-            </div>
-
-            <div class="strategy-phase">
-              <div class="phase-header">
-                <h3>Phase 3: Long-term Focus</h3>
-                <span class="status status--info">24+ Months</span>
-              </div>
-              <div class="phase-content">
-                <h4>Target States:</h4>
-                <ul>
-                  <li><strong>Large Population States</strong> - Uttar Pradesh, Maharashtra, Bihar</li>
-                  <li><strong>Emerging Markets</strong> - Gujarat, Karnataka, Kerala</li>
-                </ul>
-                <h4>Key Actions:</h4>
-                <ul>
-                  <li>Prepare rural-tailored engagement models</li>
-                  <li>Invest in digital literacy initiatives</li>
-                  <li>Develop affordable service tiers for lower-income populations</li>
-                  <li>Create micro-influencer campaigns for grassroots adoption</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card__body">
-            <h3>Risk Assessment & Mitigation</h3>
-            
-            <div class="risk-item">
-              <h4>High Climate Vulnerability</h4>
-              <p class="risk-desc">States like Assam (9.0) and Maharashtra (8.5) face significant climate risks</p>
-              <p class="mitigation"><strong>Mitigation:</strong> Develop climate-resilient digital health solutions and disaster preparedness protocols</p>
-            </div>
-
-            <div class="risk-item">
-              <h4>Low Digital Penetration</h4>
-              <p class="risk-desc">Rural states show limited internet and smartphone adoption</p>
-              <p class="mitigation"><strong>Mitigation:</strong> Partner with telecom providers for connectivity initiatives and develop offline-capable solutions</p>
-            </div>
-
-            <div class="risk-item">
-              <h4>Health Infrastructure Gaps</h4>
-              <p class="risk-desc">Many states lack adequate health infrastructure scores</p>
-              <p class="mitigation"><strong>Mitigation:</strong> Focus on telemedicine and remote monitoring capabilities to bridge infrastructure gaps</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card__body">
-            <h3>Partnership Opportunities</h3>
-            
-            <div class="partnership-section">
-              <h4>Government Partnerships</h4>
-              <ul>
-                <li>Collaborate with National Health Authority for ABDM integration</li>
-                <li>Partner with state health departments for pilot programs</li>
-                <li>Engage with Digital India initiatives for rural connectivity</li>
-              </ul>
-            </div>
-
-            <div class="partnership-section">
-              <h4>Technology Partners</h4>
-              <ul>
-                <li>Telecom providers for connectivity solutions</li>
-                <li>Regional health tech companies for local expertise</li>
-                <li>Educational institutions for digital literacy programs</li>
-              </ul>
-            </div>
-
-            <div class="partnership-section">
-              <h4>Healthcare Providers</h4>
-              <ul>
-                <li>Urban hospital chains in high-priority states</li>
-                <li>Community health centers in rural areas</li>
-                <li>Private practice networks for comprehensive coverage</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <script src="app.js"></script>
-
-<script>
-  async function loadCMSData() {
-    try {
-      const res = await fetch('data.json');
-      const json = await res.json();
-      const states = json.states || {};
-
-      // Overview tab
-      const values = Object.values(states);
-      if (values.length > 0) {
-        const totalPop = values.reduce((sum, s) => sum + (s.population_projected || 0), 0);
-        const avgInternet = values.reduce((sum, s) => sum + (s.internet_penetration || 0), 0) / values.length;
-        const avgSmartphone = values.reduce((sum, s) => sum + (s.smartphone_penetration || 0), 0) / values.length;
-        const topScore = Math.max(...values.map(s => s.market_attractiveness_score || 0));
-
-        document.getElementById("totalPopulationMetric").textContent = (totalPop / 1e6).toFixed(1) + "M";
-        document.getElementById("avgInternetMetric").textContent = avgInternet.toFixed(1) + "%";
-        document.getElementById("avgSmartphoneMetric").textContent = avgSmartphone.toFixed(1) + "%";
-        document.getElementById("topScoreMetric").textContent = topScore.toFixed(2);
-      }
-
-      // Pie Chart
-      const priorityCount = {};
-      values.forEach(s => {
-        const cat = s.priority_category || "Uncategorized";
-        priorityCount[cat] = (priorityCount[cat] || 0) + 1;
-      });
-      const ctx1 = document.getElementById('priorityPie');
-      new Chart(ctx1, {
-        type: 'pie',
-        data: {
-          labels: Object.keys(priorityCount),
-          datasets: [{
-            label: 'Priority',
-            data: Object.values(priorityCount),
-            backgroundColor: ['#4caf50', '#ff9800', '#03a9f4']
-          }]
-        }
-      });
-
-      // Bar Chart
-      const ctx2 = document.getElementById('marketChart');
-      new Chart(ctx2, {
-        type: 'bar',
-        data: {
-          labels: values.map(s => s.name),
-          datasets: [{
-            label: 'Market Score',
-            data: values.map(s => s.market_attractiveness_score),
-            backgroundColor: '#3f51b5'
-          }]
-        },
-        options: {
-          indexAxis: 'y'
-        }
-      });
-
-      // Table
-      const sorted = values.sort((a, b) => b.market_attractiveness_score - a.market_attractiveness_score).slice(0, 10);
-      const tbody = document.querySelector("#topStatesTable tbody");
-      sorted.forEach((s, i) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${i + 1}</td>
-          <td>${s.name}</td>
-          <td>${s.market_attractiveness_score}</td>
-          <td>${(s.population_projected / 1e6).toFixed(1)}</td>
-          <td>${s.internet_penetration}%</td>
-          <td>${s.smartphone_penetration}%</td>
-          <td>${s.priority_category}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-
-    } catch (err) {
-      console.error("Error loading CMS data:", err);
-    }
-  }
-
-  document.addEventListener("DOMContentLoaded", loadCMSData);
-</script>
+<!-- Toast container will be created dynamically -->
+<script src="app.js"></script>
 </body>
-
 </html>
