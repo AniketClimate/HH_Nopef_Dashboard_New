@@ -295,7 +295,7 @@
 <script>
   async function loadCMSData() {
     try {
-      const res = await fetch('public/data.json');
+      const res = await fetch('data.json');
       const json = await res.json();
       const states = json.states || {};
 
