@@ -1,159 +1,155 @@
+
+// Halla Health â€“ Fixed app.js (2025-07-30)
+// ------------------------------------------------------------
+// This script powers both the public dashboard and the CMS.
+// It safely loads data.json, renders charts, and handles tab
+// navigation without throwing runtime errors even if data is
+// missing. All DOM work waits until DOMContentLoaded.
+// ------------------------------------------------------------
+
 document.addEventListener('DOMContentLoaded', () => {
-  console.log("âœ… DOM Ready");
-  const tabBtns = document.querySelectorAll('.tab-btn');
+  console.log('âœ… Halla Health dashboard script loaded');
+
+  // ---------------------------------------------------------------------------
+  // Utility helpers
+  // ---------------------------------------------------------------------------
+  const avg = arr => arr.length ? arr.reduce((s, v) => s + (+v || 0), 0) / arr.length : 0;
+  const normalize = (val, max) => max ? Math.min(100, (val / max) * 100) : 0;
+  const formatNum = n => {
+    if (n >= 1e7) return (n / 1e7).toFixed(1) + 'Cr';
+    if (n >= 1e5) return (n / 1e5).toFixed(1) + 'L';
+    return (+n || 0).toLocaleString();
+  };
+
+  // Simple toast helper (non-blocking)
+  const showToast = (msg, type = 'info') => {
+    let box = document.getElementById('toastContainer');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'toastContainer';
+      box.className = 'toast-container';
+      document.body.appendChild(box);
+    }
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.textContent = msg;
+    box.appendChild(t);
+    setTimeout(() => t.remove(), 4000);
+  };
+
+  // ---------------------------------------------------------------------------
+  // Tab navigation (Overview â€¢ State Analysis â€¢ Compare)
+  // ---------------------------------------------------------------------------
+  const tabButtons = document.querySelectorAll('.tab-btn');
   const tabContents = document.querySelectorAll('.tab-content');
-  const dashboardView = document.getElementById('dashboardView');
-  const cmsView = document.getElementById('cmsView');
 
-  let stateData = [];
-
-  /**
-   * Tab Switching Logic
-   */
-  tabBtns.forEach(btn => {
+  tabButtons.forEach(btn => {
     btn.addEventListener('click', () => {
-      // Remove active from all
-      tabBtns.forEach(b => b.classList.remove('active'));
-      tabContents.forEach(c => c.classList.remove('active'));
-
-      // Add active to current
-      const tabID = btn.dataset.tab;
-      btn.classList.add('active');
-      const content = document.getElementById(tabID);
-      if (content) content.classList.add('active');
+      const tabId = btn.dataset.tab;
+      // update button active states
+      tabButtons.forEach(b => {
+        b.classList.toggle('active', b === btn);
+        b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
+      });
+      // update content visibility
+      tabContents.forEach(c => c.classList.toggle('active', c.id === tabId));
+      // lazy render per tab
+      if (tabId === 'overviewTab') renderOverview(stateData);
+      if (tabId === 'stateTab')   renderStateTable(stateData);
+      if (tabId === 'compareTab') setupCompare(stateData);
     });
   });
 
-  /**
-   * Navigation Buttons (Dashboard/CMS)
-   */
-  document.getElementById('navDashboard')?.addEventListener('click', () => {
-    dashboardView.classList.remove('hidden');
-    cmsView.classList.add('hidden');
-  });
-  document.getElementById('navCms')?.addEventListener('click', () => {
-    dashboardView.classList.add('hidden');
-    cmsView.classList.remove('hidden');
-  });
+  // ---------------------------------------------------------------------------
+  // Dashboard renderers
+  // ---------------------------------------------------------------------------
+  let compareChartInstance = null; // keep global reference so we can destroy
+  let stateData = [];
 
-  /**
-   * Load Data from public/data.json or fallback
-   */
-  fetch('data.json')
-  .then(res => {
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return res.json();
-  })
-  .then(data => {
-    stateData = data;
-    // Only render if kpiGrid exists
-    if (document.getElementById('kpiGrid')) {
-      renderOverview(stateData);
-    }
-    renderStateTable(stateData);
-    setupCompare(stateData);
-  })
-  .catch(err => {
-    console.error('Failed loading data.json', err);
-    showToast('Error: could not load data', 'error');
-  });
-  /**
-   * Renders Cards and Population Chart
-   */
   function renderOverview(data) {
-  const kpiGrid = document.getElementById('kpiGrid');
-  if (!kpiGrid) return;          // safety net
-    const totalPopulation = data.reduce((sum, s) => sum + (s.population || 0), 0);
-    const avgYouthPct = avg(data.map(s => s.youthPercentage));
-    const avgSmartphone = avg(data.map(s => s.smartphonePenetration));
-    const avgHealthSpend = avg(data.map(s => s.govtHealthSpendPerCapita));
+    if (!data || !data.length) return;
+    const kpiGrid = document.getElementById('kpiGrid');
+    if (!kpiGrid) return;
+
+    const totalPop       = data.reduce((s, d) => s + (+d.population || 0), 0);
+    const avgYouth       = avg(data.map(d => +d.youthPercentage || 0)).toFixed(1);
+    const avgSmartphone  = avg(data.map(d => +d.smartphonePenetration || 0)).toFixed(1);
+    const avgHealthSpend = avg(data.map(d => +d.govtHealthSpendPerCapita || 0));
 
     kpiGrid.innerHTML = `
-      <div class="kpi-card"><h3>Total Population</h3><div class="number-large">${formatNum(totalPopulation)}</div></div>
-      <div class="kpi-card"><h3>Avg Youth %</h3><div class="number-large">${avgYouthPct.toFixed(1)}%</div></div>
-      <div class="kpi-card"><h3>Avg Smartphone %</h3><div class="number-large">${avgSmartphone.toFixed(1)}%</div></div>
-      <div class="kpi-card"><h3>Avg Health Spend</h3><div class="number-large">â‚¹${formatNum(avgHealthSpend)}</div></div>
-    `;
+      <div class="kpi-card"><h3>Total Population</h3><div class="number-large">${formatNum(totalPop)}</div></div>
+      <div class="kpi-card"><h3>Avg Youth %</h3><div class="number-large">${avgYouth}%</div></div>
+      <div class="kpi-card"><h3>Avg Smartphone %</h3><div class="number-large">${avgSmartphone}%</div></div>
+      <div class="kpi-card"><h3>Avg Health Spend</h3><div class="number-large">â‚¹${formatNum(avgHealthSpend)}</div></div>`;
 
-    // Bar Chart - CORRECTED SYNTAX
-    const ctx = document.getElementById('populationChart');
-    if (!ctx) return;
+    const barCanvas = document.getElementById('populationChart');
+    if (!barCanvas) return;
 
-    const chart = new Chart(ctx, {
+    // destroy any previous bar chart stored on the canvas element
+    if (barCanvas._chart) {
+      barCanvas._chart.destroy();
+    }
+
+    barCanvas._chart = new Chart(barCanvas.getContext('2d'), {
       type: 'bar',
       data: {
-        labels: data.map(s => s.state),
+        labels: data.map(d => d.state),
         datasets: [{
           label: 'Population',
-          data: data.map(s => s.population),
+          data: data.map(d => d.population),
           backgroundColor: '#1FB8CD'
         }]
       },
       options: {
         responsive: true,
-        plugins: {
-          legend: { display: false }
-        }
+        plugins: { legend: { display: false } }
       }
     });
   }
 
   function renderStateTable(data) {
     const table = document.getElementById('stateTable');
-    const head = table.querySelector('thead');
-    const body = table.querySelector('tbody');
+    if (!table) return;
+    const thead = table.querySelector('thead');
+    const tbody = table.querySelector('tbody');
+    if (!thead || !tbody) return;
 
-    head.innerHTML = `
+    thead.innerHTML = `<tr><th>State</th><th>Population</th><th>Youth %</th><th>Smartphone %</th><th>Health â‚¹</th><th>Climate Risk</th></tr>`;
+    tbody.innerHTML = data.map(d => `
       <tr>
-        <th>State</th><th>Population</th><th>Youth %</th><th>Smartphone %</th><th>Health â‚¹</th><th>Climate Risk</th>
-      </tr>
-    `;
-    body.innerHTML = data.map(s => `
-      <tr>
-        <td>${s.state}</td>
-        <td>${formatNum(s.population)}</td>
-        <td>${s.youthPercentage}%</td>
-        <td>${s.smartphonePenetration}%</td>
-        <td>â‚¹${formatNum(s.govtHealthSpendPerCapita)}</td>
-        <td>${s.climateVulnerability}/10</td>
-      </tr>
-    `).join('');
+        <td>${d.state}</td>
+        <td>${formatNum(d.population)}</td>
+        <td>${d.youthPercentage}%</td>
+        <td>${d.smartphonePenetration}%</td>
+        <td>â‚¹${formatNum(d.govtHealthSpendPerCapita)}</td>
+        <td>${d.climateVulnerability}/10</td>
+      </tr>`).join('');
   }
 
   function setupCompare(data) {
-    const dropdownA = document.getElementById('compareA');
-    const dropdownB = document.getElementById('compareB');
-    const chartCtx = document.getElementById('compareChart');
+    const selA = document.getElementById('compareA');
+    const selB = document.getElementById('compareB');
+    const radarCanvas = document.getElementById('compareChart');
+    if (!selA || !selB || !radarCanvas) return;
 
-    if (!dropdownA || !dropdownB || !chartCtx) return;
+    // populate dropdowns only once
+    if (!selA.options.length) {
+      selA.innerHTML = data.map(d => `<option value="${d.state}">${d.state}</option>`).join('');
+      selB.innerHTML = selA.innerHTML;
+      selA.selectedIndex = 0;
+      selB.selectedIndex = 1;
+    }
 
-    let selectedA = data[0]?.state || '';
-    let selectedB = data[1]?.state || '';
-
-    dropdownA.innerHTML = data.map(s => `<option value="${s.state}">${s.state}</option>`).join('');
-    dropdownB.innerHTML = data.map(s => `<option value="${s.state}">${s.state}</option>`).join('');
-    dropdownA.value = selectedA;
-    dropdownB.value = selectedB;
-
-    dropdownA.addEventListener('change', () => {
-      selectedA = dropdownA.value;
-      drawCompareChart();
-    });
-    dropdownB.addEventListener('change', () => {
-      selectedB = dropdownB.value;
-      drawCompareChart();
-    });
-
-    function drawCompareChart() {
-      const sA = data.find(d => d.state === selectedA);
-      const sB = data.find(d => d.state === selectedB);
+    function drawRadar() {
+      const sA = data.find(d => d.state === selA.value);
+      const sB = data.find(d => d.state === selB.value);
       if (!sA || !sB) return;
 
       const dataset = {
-        labels: ['Population', 'Youth %', 'Smartphone %', 'Health Spend', 'Climate Resilience'],
+        labels: ['Population', 'Youth %', 'Smartphone %', 'Health â‚¹', 'Climate Resilience'],
         datasets: [
-          { 
-            label: selectedA, 
+          {
+            label: sA.state,
             data: [
               normalize(sA.population, 250e6),
               sA.youthPercentage,
@@ -161,11 +157,12 @@ document.addEventListener('DOMContentLoaded', () => {
               normalize(sA.govtHealthSpendPerCapita, 50000),
               (10 - sA.climateVulnerability) * 10
             ],
-            backgroundColor: '#1FB8CD88', 
-            borderColor: '#1FB8CD'
+            backgroundColor: '#1FB8CD55',
+            borderColor: '#1FB8CD',
+            borderWidth: 2
           },
-          { 
-            label: selectedB, 
+          {
+            label: sB.state,
             data: [
               normalize(sB.population, 250e6),
               sB.youthPercentage,
@@ -173,56 +170,66 @@ document.addEventListener('DOMContentLoaded', () => {
               normalize(sB.govtHealthSpendPerCapita, 50000),
               (10 - sB.climateVulnerability) * 10
             ],
-            backgroundColor: '#FFC18588', 
-            borderColor: '#FFC185' 
+            backgroundColor: '#FFC18555',
+            borderColor: '#FFC185',
+            borderWidth: 2
           }
         ]
       };
 
-      if (window.compareChart) window.compareChart.destroy();
-      window.compareChart = new Chart(chartCtx, {
+      if (compareChartInstance) compareChartInstance.destroy();
+      compareChartInstance = new Chart(radarCanvas.getContext('2d'), {
         type: 'radar',
         data: dataset,
-        options: {
-          responsive: true,
-          scales: {
-            r: { suggestedMin: 0, suggestedMax: 100 }
-          }
-        }
+        options: { responsive: true, scales: { r: { suggestedMin: 0, suggestedMax: 100 } } }
       });
     }
 
-    drawCompareChart();
+    selA.addEventListener('change', drawRadar);
+    selB.addEventListener('change', drawRadar);
+    drawRadar(); // initial render
   }
 
-  function avg(arr) {
-    const validNumbers = arr.filter(n => typeof n === 'number' && !isNaN(n));
-    return validNumbers.length > 0 ? validNumbers.reduce((sum, val) => sum + val, 0) / validNumbers.length : 0;
+  // ---------------------------------------------------------------------------
+  // Load JSON data (tries root first, then /public/)
+  // ---------------------------------------------------------------------------
+  function loadData() {
+    const tryPaths = ['data.json', 'public/data.json'];
+    let attempt = 0;
+
+    function attemptFetch() {
+      if (attempt >= tryPaths.length) {
+        showToast('âŒ Could not load data.json', 'error');
+        console.error('All data.json fetch attempts failed');
+        return;
+      }
+      const path = tryPaths[attempt];
+      fetch(path)
+        .then(r => {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
+        .then(json => {
+          console.log('ðŸ“Š Loaded', json.length, 'records from', path);
+          stateData = json;
+          // Render default tab (Overview)
+          renderOverview(stateData);
+          renderStateTable(stateData);
+          // ensure Overview tab visible on first load
+          document.querySelector('.tab-btn[data-tab="overviewTab"]').click();
+        })
+        .catch(err => {
+          console.warn('Failed to load', path, err);
+          attempt += 1;
+          attemptFetch();
+        });
+    }
+
+    attemptFetch();
   }
 
-  function normalize(val, max) {
-    return Math.min(100, (val / max) * 100);
-  }
-
-  function formatNum(n) {
-    if (n >= 1e7) return (n / 1e7).toFixed(1) + 'Cr';
-    if (n >= 1e5) return (n / 1e5).toFixed(1) + 'L';
-    return n.toLocaleString();
-  }
-
-  function showToast(msg, type = 'info') {
-    const container = document.getElementById('toastContainer') || (() => {
-      const c = document.createElement('div');
-      c.id = 'toastContainer';
-      c.className = 'toast-container';
-      document.body.appendChild(c);
-      return c;
-    })();
-
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.textContent = msg;
-    container.appendChild(toast);
-    setTimeout(() => container.removeChild(toast), 4000);
-  }
+  // ---------------------------------------------------------------------------
+  // Kick things off
+  // ---------------------------------------------------------------------------
+  loadData();
 });
