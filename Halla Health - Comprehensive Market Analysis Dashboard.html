@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Halla Health - Comprehensive Market Analysis Dashboard</title>
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="app-header">
+    <div class="container">
+      <div class="header-content">
+        <div class="logo-section">
+          <h1 class="logo">Halla Health</h1>
+          <p class="tagline">Digital Health Market Analysis Platform</p>
+        </div>
+        <nav class="main-nav">
+          <button id="navDashboard" class="nav-btn active" aria-controls="dashboardView">
+            <span>📊</span> Dashboard
+          </button>
+          <button id="navCms" class="nav-btn" aria-controls="cmsView">
+            <span>⚙️</span> CMS
+          </button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content" id="mainContainer">
+    
+    <!-- ============ DASHBOARD VIEW ============ -->
+    <section id="dashboardView" class="view">
+      <div class="container">
+        
+        <!-- Dashboard Header -->
+        <div class="dashboard-header">
+          <h2>Market Entry Analysis Dashboard</h2>
+          <p>Comprehensive analysis of market parameters across Indian states for Halla Health</p>
+        </div>
+
+        <!-- Dashboard Tabs -->
+        <div class="dashboard-tabs" role="tablist">
+          <button class="tab-btn active" data-tab="overviewTab" role="tab" aria-selected="true">
+            <span>📈</span> Market Overview
+          </button>
+          <button class="tab-btn" data-tab="stateTab" role="tab" aria-selected="false">
+            <span>🗺️</span> State Analysis  
+          </button>
+          <button class="tab-btn" data-tab="compareTab" role="tab" aria-selected="false">
+            <span>⚖️</span> State Comparison
+          </button>
+          <button class="tab-btn" data-tab="trendsTab" role="tab" aria-selected="false">
+            <span>📊</span> Market Trends
+          </button>
+          <button class="tab-btn" data-tab="insightsTab" role="tab" aria-selected="false">
+            <span>💡</span> Strategic Insights
+          </button>
+        </div>
+
+        <!-- ============ OVERVIEW TAB ============ -->
+        <div id="overviewTab" class="tab-content active" role="tabpanel">
+          
+          <!-- Key Performance Indicators -->
+          <div class="section-header">
+            <h3>Key Market Indicators</h3>
+            <p>Overview of market parameters across all states</p>
+          </div>
+          
+          <div id="kpiGrid" class="kpi-grid" aria-live="polite">
+            <!-- KPI cards will be populated here -->
+          </div>
+
+          <!-- Charts Row 1 -->
+          <div class="charts-row">
+            <div class="chart-card">
+              <div class="chart-header">
+                <h4>Population Distribution</h4>
+                <p>Current vs Projected Population by State</p>
+              </div>
+              <div class="chart-container">
+                <canvas id="populationChart"></canvas>
+              </div>
+            </div>
+            
+            <div class="chart-card">
+              <div class="chart-header">
+                <h4>Market Attractiveness</h4>
+                <p>Composite Market Attractiveness Scores</p>
+              </div>
+              <div class="chart-container">
+                <canvas id="attractivenessChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts Row 2 -->
+          <div class="charts-row">
+            <div class="chart-card">
+              <div class="chart-header">
+                <h4>Digital Infrastructure</h4>
+                <p>Internet & Smartphone Penetration</p>
+              </div>
+              <div class="chart-container">
+                <canvas id="digitalChart"></canvas>
+              </div>
+            </div>
+            
+            <div class="chart-card">
+              <div class="chart-header">
+                <h4>Health Ecosystem</h4>
+                <p>Health Infrastructure & ABDM Adoption</p>
+              </div>
+              <div class="chart-container">
+                <canvas id="healthChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============ STATE ANALYSIS TAB ============ -->
+        <div id="stateTab" class="tab-content" role="tabpanel">
+          <div class="section-header">
+            <h3>Detailed State Analysis</h3>
+            <p>Comprehensive market parameters for each state</p>
+          </div>
+          
+          <div class="table-controls">
+            <div class="search-filter">
+              <input type="text" id="stateSearch" placeholder="Search states..." class="search-input">
+              <select id="priorityFilter" class="filter-select">
+                <option value="">All Priorities</option>
+                <option value="High Priority">High Priority</option>
+                <option value="Medium Priority">Medium Priority</option>
+                <option value="Low Priority">Low Priority</option>
+              </select>
+            </div>
+            <button id="exportTableBtn" class="export-btn">📥 Export Data</button>
+          </div>
+
+          <div class="table-wrapper">
+            <table id="stateTable" class="data-table" aria-describedby="stateTableCaption">
+              <caption id="stateTableCaption" class="sr-only">Detailed market parameters for each state</caption>
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ============ COMPARISON TAB ============ -->
+        <div id="compareTab" class="tab-content" role="tabpanel">
+          <div class="section-header">
+            <h3>State-by-State Comparison</h3>
+            <p>Compare market parameters between selected states</p>
+          </div>
+
+          <div class="compare-controls">
+            <div class="compare-selectors">
+              <div class="state-selector">
+                <label for="compareA" class="form-label">Select State A</label>
+                <select id="compareA" class="form-control">
+                  <option value="">Choose a state...</option>
+                </select>
+              </div>
+              <div class="vs-indicator">VS</div>
+              <div class="state-selector">
+                <label for="compareB" class="form-label">Select State B</label>
+                <select id="compareB" class="form-control">
+                  <option value="">Choose a state...</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="comparison-results">
+            <div class="chart-card full-width">
+              <div class="chart-header">
+                <h4>Multi-Parameter Comparison</h4>
+                <p>Radar chart comparing all key metrics</p>
+              </div>
+              <div class="chart-container large">
+                <canvas id="compareChart"></canvas>
+              </div>
+            </div>
+
+            <div id="comparisonDetails" class="comparison-details">
+              <!-- Detailed comparison will be populated here -->
+            </div>
+          </div>
+        </div>
+
+        <!-- ============ TRENDS TAB ============ -->
+        <div id="trendsTab" class="tab-content" role="tabpanel">
+          <div class="section-header">
+            <h3>Market Trends Analysis</h3>
+            <p>Trend analysis and correlations across market parameters</p>
+          </div>
+
+          <div class="trends-grid">
+            <div class="chart-card">
+              <div class="chart-header">
+                <h4>Economic vs Digital Readiness</h4>
+                <p>Per Capita Income vs Digital Literacy</p>
+              </div>
+              <div class="chart-container">
+                <canvas id="economicDigitalChart"></canvas>
+              </div>
+            </div>
+
+            <div class="chart-card">
+              <div class="chart-header">
+                <h4>Health Infrastructure vs ABDM Adoption</h4>
+                <p>Correlation between infrastructure and digital adoption</p>
+              </div>
+              <div class="chart-container">
+                <canvas id="healthAdoptionChart"></canvas>
+              </div>
+            </div>
+
+            <div class="chart-card">
+              <div class="chart-header">
+                <h4>Climate Risk vs Market Attractiveness</h4>
+                <p>Risk-Return Analysis for Market Entry</p>
+              </div>
+              <div class="chart-container">
+                <canvas id="riskReturnChart"></canvas>
+              </div>
+            </div>
+
+            <div class="chart-card">
+              <div class="chart-header">
+                <h4>Priority Distribution</h4>
+                <p>State categorization by priority levels</p>
+              </div>
+              <div class="chart-container">
+                <canvas id="priorityChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============ INSIGHTS TAB ============ -->
+        <div id="insightsTab" class="tab-content" role="tabpanel">
+          <div class="section-header">
+            <h3>Strategic Market Insights</h3>
+            <p>Data-driven recommendations for market entry strategy</p>
+          </div>
+
+          <div class="insights-grid">
+            <div class="insight-card priority-high">
+              <h4>🎯 High Priority Markets</h4>
+              <div id="highPriorityStates" class="insight-content">
+                <!-- High priority states will be populated here -->
+              </div>
+            </div>
+
+            <div class="insight-card priority-medium">
+              <h4>⚖️ Medium Priority Markets</h4>
+              <div id="mediumPriorityStates" class="insight-content">
+                <!-- Medium priority states will be populated here -->
+              </div>
+            </div>
+
+            <div class="insight-card">
+              <h4>📊 Market Entry Recommendations</h4>
+              <div id="marketRecommendations" class="insight-content">
+                <!-- Recommendations will be populated here -->
+              </div>
+            </div>
+
+            <div class="insight-card">
+              <h4>🔮 Growth Opportunities</h4>
+              <div id="growthOpportunities" class="insight-content">
+                <!-- Growth opportunities will be populated here -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============ CMS VIEW ============ -->
+    <section id="cmsView" class="view hidden">
+      <div class="container">
+        
+        <!-- Login Section -->
+        <div id="loginSection">
+          <div class="login-card">
+            <div class="login-header">
+              <h2>Content Management System</h2>
+              <p>Manage state data and market parameters</p>
+            </div>
+            <form id="loginForm">
+              <div class="form-group">
+                <label for="username" class="form-label">Username</label>
+                <input id="username" type="text" class="form-control" required aria-required="true">
+              </div>
+              <div class="form-group">
+                <label for="password" class="form-label">Password</label>
+                <input id="password" type="password" class="form-control" required aria-required="true">
+              </div>
+              <button type="submit" class="btn btn-primary btn-full-width">
+                <span>🔐</span> Sign In
+              </button>
+              <div class="login-hint">
+                <small>Demo credentials: admin / admin123</small>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Admin Section -->
+        <div id="adminSection" class="hidden">
+          <div class="admin-header">
+            <h2>State Data Management</h2>
+            <div class="admin-actions">
+              <button id="exportBtn" class="btn btn-primary">
+                <span>📤</span> Export JSON
+              </button>
+              <button id="importBtn" class="btn btn-outline">
+                <span>📥</span> Import JSON
+              </button>
+              <input id="fileInput" type="file" accept="application/json" class="hidden">
+            </div>
+          </div>
+
+          <div class="cms-table-wrapper">
+            <table id="cmsStateTable" class="data-table cms-table" aria-describedby="cmsTableCaption">
+              <caption id="cmsTableCaption" class="sr-only">Editable state market parameters</caption>
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Toast Container (will be created dynamically) -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="app.js"></script>
+</body>
+</html>
